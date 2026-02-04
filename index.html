@@ -50,7 +50,19 @@
       align-items: center;
       position: relative;
       overflow: hidden;
-      perspective: 200px;
+    }
+
+    /* Horizontal split line */
+    .cell::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #000;
+      z-index: 10;
+      transform: translateY(-50%);
     }
 
     .char {
@@ -58,63 +70,26 @@
       font-weight: 400;
       color: #fff;
       text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-      opacity: 0;
-      transform: rotateX(-90deg);
-      transition: none;
-    }
-
-    .char.flip-in {
-      animation: flipIn 0.4s cubic-bezier(0.17, 0.67, 0.35, 1.2) forwards;
-    }
-
-    .char.visible {
-      opacity: 1;
-      transform: rotateX(0deg);
-    }
-
-    @keyframes flipIn {
-      0% {
-        opacity: 0;
-        transform: rotateX(-120deg);
-      }
-      40% {
-        opacity: 1;
-      }
-      70% {
-        transform: rotateX(10deg);
-      }
-      100% {
-        opacity: 1;
-        transform: rotateX(0deg);
-      }
-    }
-
-    /* Flap animation overlay */
-    .flap {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 50%;
-      background: url('tile.png') top center/80px 100px no-repeat;
-      border-radius: 8px 8px 0 0;
-      transform-origin: bottom center;
-      transform: rotateX(0deg);
+      position: relative;
       z-index: 5;
-      display: none;
     }
 
-    .flap.animating {
-      display: block;
-      animation: flapDown 0.4s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards;
+    .char.flipping {
+      animation: quickFlip 0.06s ease-in-out;
     }
 
-    @keyframes flapDown {
+    @keyframes quickFlip {
       0% {
         transform: rotateX(0deg);
+        opacity: 1;
+      }
+      50% {
+        transform: rotateX(90deg);
+        opacity: 0.5;
       }
       100% {
-        transform: rotateX(-180deg);
+        transform: rotateX(0deg);
+        opacity: 1;
       }
     }
 
@@ -156,19 +131,29 @@
 <path d="M42.2615 60.8531L57.7013 57.0146C57.7013 57.0146 51.0531 12.0669 51.0114 11.7583C50.9698 11.4496 50.7003 11.2806 50.4774 11.261C50.2545 11.2414 45.9089 11.1753 45.9089 11.1753C45.9089 11.1753 43.2585 8.60076 42.2639 7.62827V60.8531H42.2615Z" fill="white"/>
 </svg>`;
 
+    // Characters that the flap cycles through (like a real split-flap)
+    const FLAP_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*+-=.:;<>?';
+
     const rows = [
       { text: '              ', delay: 0 },
       { text: '              ', delay: 0 },
       { text: 'EVERYWHERE    ', delay: 0 },
-      { text: '    EDITION  S', delay: 600, hasLogo: true },
-      { text: '>>>           ', delay: 1200, isChevron: true },
-      { text: 'SECTION       ', delay: 1800 },
+      { text: '    EDITION  S', delay: 800, hasLogo: true },
+      { text: '>>>           ', delay: 1600, isChevron: true },
+      { text: 'SECTION       ', delay: 2400 },
       { text: '              ', delay: 0 },
       { text: '              ', delay: 0 }
     ];
 
     const CELLS_PER_ROW = 14;
-    const CHAR_DELAY = 80; // ms between each character flip
+    const CHAR_DELAY = 60; // ms between each character starting
+    const FLIP_INTERVAL = 50; // ms between each flip cycle
+    const MIN_FLIPS = 6; // minimum number of character cycles
+    const MAX_FLIPS = 14; // maximum number of character cycles
+
+    function getRandomChar() {
+      return FLAP_CHARS[Math.floor(Math.random() * FLAP_CHARS.length)];
+    }
 
     function createBoard() {
       const board = document.getElementById('board');
@@ -186,25 +171,22 @@
           const charValue = rowData.text[i] || ' ';
 
           if (rowData.hasLogo && i === CELLS_PER_ROW - 1) {
-            // Shopify logo
             char.className = 'char logo';
-            char.innerHTML = shopifyLogo;
+            char.dataset.target = 'LOGO';
+            char.dataset.isLogo = 'true';
           } else if (rowData.isChevron && charValue === '>') {
             char.className = 'char chevron';
-            char.textContent = '>';
+            char.dataset.target = '>';
           } else {
             char.className = 'char';
-            char.textContent = charValue;
+            char.dataset.target = charValue;
           }
 
           char.dataset.row = rowIndex;
           char.dataset.col = i;
-
-          const flap = document.createElement('div');
-          flap.className = 'flap';
+          char.textContent = '';
 
           cell.appendChild(char);
-          cell.appendChild(flap);
           row.appendChild(cell);
         }
 
@@ -212,42 +194,59 @@
       });
     }
 
+    function flipToChar(charElement, targetChar, isLogo, callback) {
+      const numFlips = MIN_FLIPS + Math.floor(Math.random() * (MAX_FLIPS - MIN_FLIPS));
+      let currentFlip = 0;
+
+      function doFlip() {
+        if (currentFlip >= numFlips) {
+          // Final character
+          if (isLogo) {
+            charElement.innerHTML = shopifyLogo;
+          } else {
+            charElement.textContent = targetChar;
+          }
+          charElement.classList.remove('flipping');
+          if (callback) callback();
+          return;
+        }
+
+        // Show random character with flip animation
+        charElement.classList.add('flipping');
+        charElement.textContent = getRandomChar();
+
+        currentFlip++;
+        setTimeout(() => {
+          charElement.classList.remove('flipping');
+          setTimeout(doFlip, 10);
+        }, FLIP_INTERVAL);
+      }
+
+      doFlip();
+    }
+
     function animateBoard() {
       const chars = document.querySelectorAll('.char');
-      const flaps = document.querySelectorAll('.flap');
 
-      // Reset all
-      chars.forEach(char => {
-        char.classList.remove('flip-in', 'visible');
-      });
-      flaps.forEach(flap => {
-        flap.classList.remove('animating');
+      chars.forEach((char) => {
+        char.textContent = '';
+        char.innerHTML = '';
       });
 
-      // Animate each character
-      chars.forEach((char, index) => {
+      chars.forEach((char) => {
         const row = parseInt(char.dataset.row);
         const col = parseInt(char.dataset.col);
         const rowDelay = rows[row].delay;
         const charDelay = col * CHAR_DELAY;
         const totalDelay = rowDelay + charDelay;
 
-        const charValue = char.textContent.trim();
-        const isLogo = char.classList.contains('logo');
-        if (!charValue && !isLogo) return;
+        const targetChar = char.dataset.target;
+        const isLogo = char.dataset.isLogo === 'true';
 
-        const cell = char.parentElement;
-        const flap = cell.querySelector('.flap');
+        if (targetChar.trim() === '' && !isLogo) return;
 
         setTimeout(() => {
-          flap.classList.add('animating');
-          char.classList.add('flip-in');
-
-          setTimeout(() => {
-            char.classList.remove('flip-in');
-            char.classList.add('visible');
-            flap.classList.remove('animating');
-          }, 400);
+          flipToChar(char, targetChar, isLogo);
         }, totalDelay);
       });
     }
