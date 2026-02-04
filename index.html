@@ -64,7 +64,7 @@
     }
 
     .char.flip-in {
-      animation: flipIn 0.15s ease-out forwards;
+      animation: flipIn 0.4s cubic-bezier(0.17, 0.67, 0.35, 1.2) forwards;
     }
 
     .char.visible {
@@ -75,10 +75,13 @@
     @keyframes flipIn {
       0% {
         opacity: 0;
-        transform: rotateX(-90deg);
+        transform: rotateX(-120deg);
       }
-      50% {
+      40% {
         opacity: 1;
+      }
+      70% {
+        transform: rotateX(10deg);
       }
       100% {
         opacity: 1;
@@ -103,7 +106,7 @@
 
     .flap.animating {
       display: block;
-      animation: flapDown 0.15s ease-in forwards;
+      animation: flapDown 0.4s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards;
     }
 
     @keyframes flapDown {
@@ -157,15 +160,15 @@
       { text: '              ', delay: 0 },
       { text: '              ', delay: 0 },
       { text: 'EVERYWHERE    ', delay: 0 },
-      { text: '    EDITION  S', delay: 400, hasLogo: true },
-      { text: '>>>           ', delay: 800, isChevron: true },
-      { text: 'SECTION       ', delay: 1200 },
+      { text: '    EDITION  S', delay: 600, hasLogo: true },
+      { text: '>>>           ', delay: 1200, isChevron: true },
+      { text: 'SECTION       ', delay: 1800 },
       { text: '              ', delay: 0 },
       { text: '              ', delay: 0 }
     ];
 
     const CELLS_PER_ROW = 14;
-    const CHAR_DELAY = 50; // ms between each character flip
+    const CHAR_DELAY = 80; // ms between each character flip
 
     function createBoard() {
       const board = document.getElementById('board');
@@ -244,7 +247,7 @@
             char.classList.remove('flip-in');
             char.classList.add('visible');
             flap.classList.remove('animating');
-          }, 150);
+          }, 400);
         }, totalDelay);
       });
     }
