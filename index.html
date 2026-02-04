@@ -44,10 +44,11 @@
       width: 80px;
       height: 100px;
       position: relative;
+      perspective: 200px;
     }
 
-    /* Static bottom half - always visible behind the flap */
-    .bottom {
+    /* Bottom half - shows the NEW character (revealed when flap falls) */
+    .half-bottom {
       position: absolute;
       bottom: 0;
       left: 0;
@@ -61,12 +62,12 @@
       align-items: flex-start;
     }
 
-    .bottom .char {
+    .half-bottom .char {
       transform: translateY(-50%);
     }
 
-    /* Static top half - visible when no flip is happening */
-    .top {
+    /* Top half - shows the CURRENT character (static background) */
+    .half-top {
       position: absolute;
       top: 0;
       left: 0;
@@ -78,47 +79,38 @@
       display: flex;
       justify-content: center;
       align-items: flex-end;
-      z-index: 1;
     }
 
-    .top .char {
+    .half-top .char {
       transform: translateY(50%);
     }
 
-    /* The flipping flap - sits on top */
-    .flap-container {
+    /* THE FLAP - this is what actually flips */
+    .flap {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 50%;
-      perspective: 400px;
+      transform-origin: bottom center;
+      transform-style: preserve-3d;
       z-index: 10;
     }
 
-    .flap {
+    .flap-face {
       position: absolute;
       width: 100%;
       height: 100%;
-      transform-style: preserve-3d;
-      transform-origin: bottom center;
-      transition: transform 0.12s ease-in;
-    }
-
-    .flap.flip {
-      transform: rotateX(-180deg);
-    }
-
-    .flap-front {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: url('tile.png') top center / 80px 100px no-repeat;
-      border-radius: 8px 8px 0 0;
       backface-visibility: hidden;
       overflow: hidden;
       display: flex;
       justify-content: center;
+    }
+
+    /* Front of flap - shows OLD character top half */
+    .flap-front {
+      background: url('tile.png') top center / 80px 100px no-repeat;
+      border-radius: 8px 8px 0 0;
       align-items: flex-end;
     }
 
@@ -126,17 +118,11 @@
       transform: translateY(50%);
     }
 
+    /* Back of flap - shows NEW character bottom half (upside down, revealed when flipped) */
     .flap-back {
-      position: absolute;
-      width: 100%;
-      height: 100%;
       background: url('tile.png') bottom center / 80px 100px no-repeat;
       border-radius: 0 0 8px 8px;
-      backface-visibility: hidden;
       transform: rotateX(180deg);
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
       align-items: flex-start;
     }
 
@@ -161,7 +147,7 @@
       height: 50px;
     }
 
-    /* Split line */
+    /* Split line - the gap between top and bottom */
     .split-line {
       position: absolute;
       top: 50%;
@@ -198,24 +184,24 @@
       { text: '              ', delay: 0 },
       { text: '              ', delay: 0 },
       { text: 'EVERYWHERE    ', delay: 0 },
-      { text: '    EDITION  L', delay: 800, hasLogo: true },
-      { text: '>>>           ', delay: 1600, isChevron: true },
-      { text: 'SECTION       ', delay: 2400 },
+      { text: '    EDITION  L', delay: 1200, hasLogo: true },
+      { text: '>>>           ', delay: 2400, isChevron: true },
+      { text: 'SECTION       ', delay: 3600 },
       { text: '              ', delay: 0 },
       { text: '              ', delay: 0 }
     ];
 
     const CELLS_PER_ROW = 14;
-    const CHAR_DELAY = 60;
-    const FLIP_DURATION = 120;
-    const MIN_FLIPS = 8;
-    const MAX_FLIPS = 16;
+    const CHAR_DELAY = 80;
+    const FLIP_DURATION = 250; // Slower flip so you can see it
+    const MIN_FLIPS = 5;
+    const MAX_FLIPS = 10;
 
     function getRandomChar() {
       return FLAP_CHARS[Math.floor(Math.random() * FLAP_CHARS.length)];
     }
 
-    function makeCharContent(char, isLogo, isChevron) {
+    function makeContent(char, isLogo) {
       if (isLogo && char === 'LOGO') {
         return shopifyLogo;
       }
@@ -225,105 +211,81 @@
     function createCell() {
       const cell = document.createElement('div');
       cell.className = 'cell';
-
-      // Bottom half (reveals new char)
-      const bottom = document.createElement('div');
-      bottom.className = 'bottom';
-      const bottomChar = document.createElement('span');
-      bottomChar.className = 'char';
-      bottom.appendChild(bottomChar);
-
-      // Top half (shows current char)
-      const top = document.createElement('div');
-      top.className = 'top';
-      const topChar = document.createElement('span');
-      topChar.className = 'char';
-      top.appendChild(topChar);
-
-      // Flap container with perspective
-      const flapContainer = document.createElement('div');
-      flapContainer.className = 'flap-container';
-
-      const flap = document.createElement('div');
-      flap.className = 'flap';
-
-      // Front of flap (shows old char, visible initially)
-      const flapFront = document.createElement('div');
-      flapFront.className = 'flap-front';
-      const flapFrontChar = document.createElement('span');
-      flapFrontChar.className = 'char';
-      flapFront.appendChild(flapFrontChar);
-
-      // Back of flap (shows new char, revealed after flip)
-      const flapBack = document.createElement('div');
-      flapBack.className = 'flap-back';
-      const flapBackChar = document.createElement('span');
-      flapBackChar.className = 'char';
-      flapBack.appendChild(flapBackChar);
-
-      flap.appendChild(flapFront);
-      flap.appendChild(flapBack);
-      flapContainer.appendChild(flap);
-
-      // Split line
-      const splitLine = document.createElement('div');
-      splitLine.className = 'split-line';
-
-      cell.appendChild(bottom);
-      cell.appendChild(top);
-      cell.appendChild(flapContainer);
-      cell.appendChild(splitLine);
-
+      cell.innerHTML = `
+        <div class="half-bottom"><span class="char"></span></div>
+        <div class="half-top"><span class="char"></span></div>
+        <div class="flap">
+          <div class="flap-face flap-front"><span class="char"></span></div>
+          <div class="flap-face flap-back"><span class="char"></span></div>
+        </div>
+        <div class="split-line"></div>
+      `;
       return cell;
     }
 
-    function setChar(cell, char, isLogo, isChevron) {
-      const content = makeCharContent(char, isLogo, isChevron);
-      const charClass = isChevron ? 'char chevron' : (isLogo && char === 'LOGO' ? 'char logo' : 'char');
+    function animateFlap(flap, duration) {
+      return new Promise(resolve => {
+        let start = null;
 
-      cell.querySelector('.top .char').className = charClass;
-      cell.querySelector('.top .char').innerHTML = content;
-      cell.querySelector('.bottom .char').className = charClass;
-      cell.querySelector('.bottom .char').innerHTML = content;
-      cell.querySelector('.flap-front .char').className = charClass;
-      cell.querySelector('.flap-front .char').innerHTML = content;
+        function step(timestamp) {
+          if (!start) start = timestamp;
+          const elapsed = timestamp - start;
+          const progress = Math.min(elapsed / duration, 1);
+
+          // Easing function for more mechanical feel
+          const eased = progress < 0.5
+            ? 2 * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+          const angle = eased * -180;
+          flap.style.transform = `rotateX(${angle}deg)`;
+
+          if (progress < 1) {
+            requestAnimationFrame(step);
+          } else {
+            resolve();
+          }
+        }
+
+        requestAnimationFrame(step);
+      });
     }
 
-    function flipTo(cell, newChar, isLogo, isChevron) {
-      return new Promise(resolve => {
-        const flap = cell.querySelector('.flap');
-        const flapFrontChar = cell.querySelector('.flap-front .char');
-        const flapBackChar = cell.querySelector('.flap-back .char');
-        const bottomChar = cell.querySelector('.bottom .char');
-        const topChar = cell.querySelector('.top .char');
+    async function flipTo(cell, newChar, isLogo, isChevron) {
+      const flap = cell.querySelector('.flap');
+      const flapFront = cell.querySelector('.flap-front .char');
+      const flapBack = cell.querySelector('.flap-back .char');
+      const halfBottom = cell.querySelector('.half-bottom .char');
+      const halfTop = cell.querySelector('.half-top .char');
 
-        const newContent = makeCharContent(newChar, isLogo, isChevron);
-        const charClass = isChevron ? 'char chevron' : (isLogo && newChar === 'LOGO' ? 'char logo' : 'char');
+      const content = makeContent(newChar, isLogo);
+      const charClass = isChevron ? 'char chevron' : (isLogo && newChar === 'LOGO' ? 'char logo' : 'char');
 
-        // Set up: flap front has current char, flap back and bottom have new char
-        flapBackChar.className = charClass;
-        flapBackChar.innerHTML = newContent;
-        bottomChar.className = charClass;
-        bottomChar.innerHTML = newContent;
+      // Before flip:
+      // - flap front shows current (old) character
+      // - flap back will show new character (bottom half, upside down)
+      // - half-bottom shows new character (will be revealed)
 
-        // Reset flap to unflipped state
-        flap.classList.remove('flip');
-        void flap.offsetWidth; // Force reflow
+      flapBack.className = charClass;
+      flapBack.innerHTML = content;
+      halfBottom.className = charClass;
+      halfBottom.innerHTML = content;
 
-        // Trigger flip
-        flap.classList.add('flip');
+      // Reset flap to starting position
+      flap.style.transform = 'rotateX(0deg)';
 
-        setTimeout(() => {
-          // After flip completes, update static elements and reset flap
-          topChar.className = charClass;
-          topChar.innerHTML = newContent;
-          flapFrontChar.className = charClass;
-          flapFrontChar.innerHTML = newContent;
-          flap.classList.remove('flip');
+      // Animate the flap falling
+      await animateFlap(flap, FLIP_DURATION);
 
-          resolve();
-        }, FLIP_DURATION);
-      });
+      // After flip completes:
+      // - Update the static top half to show new character
+      // - Update flap front to show new character (for next flip)
+      // - Reset flap rotation
+      halfTop.className = charClass;
+      halfTop.innerHTML = content;
+      flapFront.className = charClass;
+      flapFront.innerHTML = content;
+      flap.style.transform = 'rotateX(0deg)';
     }
 
     async function animateCell(cell, targetChar, isLogo, isChevron) {
@@ -331,12 +293,12 @@
 
       const numFlips = MIN_FLIPS + Math.floor(Math.random() * (MAX_FLIPS - MIN_FLIPS));
 
+      // Cycle through random characters
       for (let i = 0; i < numFlips; i++) {
         await flipTo(cell, getRandomChar(), false, isChevron);
-        await new Promise(r => setTimeout(r, 30));
       }
 
-      // Final flip to target
+      // Final flip to target character
       const finalChar = isLogo ? 'LOGO' : targetChar;
       await flipTo(cell, finalChar, isLogo, isChevron);
     }
