@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Split-Flap Animation</title>
+  <style>
+    @font-face {
+      font-family: 'IBM Plex Mono';
+      src: url('IBMPlexMono-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #000000;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .board {
+      background: #000000;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .row {
+      display: flex;
+      gap: 4px;
+    }
+
+    .cell {
+      width: 80px;
+      height: 100px;
+      background: url('tile.png') center/cover no-repeat;
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      perspective: 200px;
+    }
+
+    .char {
+      font-size: 72px;
+      font-weight: 400;
+      color: #fff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: rotateX(-90deg);
+      transition: none;
+    }
+
+    .char.flip-in {
+      animation: flipIn 0.15s ease-out forwards;
+    }
+
+    .char.visible {
+      opacity: 1;
+      transform: rotateX(0deg);
+    }
+
+    @keyframes flipIn {
+      0% {
+        opacity: 0;
+        transform: rotateX(-90deg);
+      }
+      50% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 1;
+        transform: rotateX(0deg);
+      }
+    }
+
+    /* Flap animation overlay */
+    .flap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50%;
+      background: url('tile.png') top center/80px 100px no-repeat;
+      border-radius: 8px 8px 0 0;
+      transform-origin: bottom center;
+      transform: rotateX(0deg);
+      z-index: 5;
+      display: none;
+    }
+
+    .flap.animating {
+      display: block;
+      animation: flapDown 0.15s ease-in forwards;
+    }
+
+    @keyframes flapDown {
+      0% {
+        transform: rotateX(0deg);
+      }
+      100% {
+        transform: rotateX(-180deg);
+      }
+    }
+
+    /* Chevron styling */
+    .chevron {
+      font-size: 60px;
+      font-weight: 400;
+    }
+
+    /* Shopify logo */
+    .logo {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .logo svg {
+      width: 50px;
+      height: 50px;
+    }
+
+    /* Click to replay */
+    .replay-hint {
+      position: fixed;
+      bottom: 20px;
+      color: #666;
+      font-size: 14px;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div class="board" id="board"></div>
+  <div class="replay-hint">Click anywhere to replay</div>
+
+  <script>
+    const shopifyLogo = `<svg width="61" height="61" viewBox="0 0 61 61" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M40.5809 7.11622C40.576 7.11622 39.9 7.32688 38.7535 7.68207C38.5625 7.06233 38.2808 6.3005 37.879 5.53378C36.5857 3.06459 34.6897 1.7565 32.3993 1.75405C32.3968 1.75405 32.3944 1.75405 32.3919 1.75405C32.2327 1.75405 32.0759 1.76875 31.9167 1.78344C31.8506 1.70261 31.782 1.62177 31.7085 1.54584C30.7115 0.477811 29.4304 -0.0415038 27.8969 0.00258893C24.9378 0.0883248 21.9934 2.22437 19.6051 6.0188C17.9246 8.68886 16.6459 12.0448 16.2834 14.6389C12.8858 15.6898 10.5097 16.4271 10.4583 16.4418C8.74354 16.9807 8.68965 17.0346 8.46428 18.6489C8.29771 19.8737 3.8125 54.5625 3.8125 54.5625L41.0317 61V7.04028C40.848 7.05253 40.6838 7.08682 40.5809 7.11622ZM31.9878 9.77648C30.0183 10.3864 27.8675 11.0527 25.7119 11.719C26.3194 9.39679 27.4683 7.08192 28.8817 5.56807C29.4083 5.00467 30.1432 4.37512 31.0128 4.01748C31.8285 5.72485 32.0074 8.1426 31.9878 9.77648ZM27.9582 1.97206C28.6539 1.95737 29.2369 2.10924 29.7366 2.43994C28.938 2.85392 28.1639 3.45162 27.4389 4.22814C25.56 6.24416 24.1197 9.37475 23.5465 12.3927C21.7558 12.9463 20.0019 13.4901 18.39 13.9898C19.4091 9.23512 23.3921 2.10189 27.9582 1.97206ZM22.2016 29.0426C22.4025 32.2099 30.7311 32.9007 31.199 40.3181C31.5664 46.153 28.1051 50.1434 23.1129 50.4594C17.1236 50.8366 13.8265 47.3043 13.8265 47.3043L15.0953 41.9054C15.0953 41.9054 18.4145 44.4089 21.0699 44.2423C22.8042 44.1321 23.424 42.7211 23.3627 41.7241C23.1031 37.5941 16.3201 37.8366 15.8915 31.0512C15.5314 25.3388 19.2817 19.5528 27.5564 19.0311C30.7458 18.8302 32.3772 19.6435 32.3772 19.6435L30.4837 26.7228C30.4837 26.7228 28.3722 25.7625 25.8711 25.9193C22.2041 26.1471 22.1649 28.462 22.2016 29.0426ZM33.9548 9.16898C33.9327 7.66983 33.7539 5.58767 33.0558 3.78477C35.2996 4.211 36.4068 6.74878 36.8723 8.26508C36.0076 8.53209 35.0204 8.83828 33.9548 9.16898Z" fill="white"/>
+<path d="M42.2615 60.8531L57.7013 57.0146C57.7013 57.0146 51.0531 12.0669 51.0114 11.7583C50.9698 11.4496 50.7003 11.2806 50.4774 11.261C50.2545 11.2414 45.9089 11.1753 45.9089 11.1753C45.9089 11.1753 43.2585 8.60076 42.2639 7.62827V60.8531H42.2615Z" fill="white"/>
+</svg>`;
+
+    const rows = [
+      { text: '              ', delay: 0 },
+      { text: '              ', delay: 0 },
+      { text: 'EVERYWHERE    ', delay: 0 },
+      { text: '    EDITION  S', delay: 400, hasLogo: true },
+      { text: '>>>           ', delay: 800, isChevron: true },
+      { text: 'SECTION       ', delay: 1200 },
+      { text: '              ', delay: 0 },
+      { text: '              ', delay: 0 }
+    ];
+
+    const CELLS_PER_ROW = 14;
+    const CHAR_DELAY = 50; // ms between each character flip
+
+    function createBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+
+      rows.forEach((rowData, rowIndex) => {
+        const row = document.createElement('div');
+        row.className = 'row';
+
+        for (let i = 0; i < CELLS_PER_ROW; i++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+
+          const char = document.createElement('span');
+          const charValue = rowData.text[i] || ' ';
+
+          if (rowData.hasLogo && i === CELLS_PER_ROW - 1) {
+            // Shopify logo
+            char.className = 'char logo';
+            char.innerHTML = shopifyLogo;
+          } else if (rowData.isChevron && charValue === '>') {
+            char.className = 'char chevron';
+            char.textContent = '>';
+          } else {
+            char.className = 'char';
+            char.textContent = charValue;
+          }
+
+          char.dataset.row = rowIndex;
+          char.dataset.col = i;
+
+          const flap = document.createElement('div');
+          flap.className = 'flap';
+
+          cell.appendChild(char);
+          cell.appendChild(flap);
+          row.appendChild(cell);
+        }
+
+        board.appendChild(row);
+      });
+    }
+
+    function animateBoard() {
+      const chars = document.querySelectorAll('.char');
+      const flaps = document.querySelectorAll('.flap');
+
+      // Reset all
+      chars.forEach(char => {
+        char.classList.remove('flip-in', 'visible');
+      });
+      flaps.forEach(flap => {
+        flap.classList.remove('animating');
+      });
+
+      // Animate each character
+      chars.forEach((char, index) => {
+        const row = parseInt(char.dataset.row);
+        const col = parseInt(char.dataset.col);
+        const rowDelay = rows[row].delay;
+        const charDelay = col * CHAR_DELAY;
+        const totalDelay = rowDelay + charDelay;
+
+        const charValue = char.textContent.trim();
+        const isLogo = char.classList.contains('logo');
+        if (!charValue && !isLogo) return;
+
+        const cell = char.parentElement;
+        const flap = cell.querySelector('.flap');
+
+        setTimeout(() => {
+          flap.classList.add('animating');
+          char.classList.add('flip-in');
+
+          setTimeout(() => {
+            char.classList.remove('flip-in');
+            char.classList.add('visible');
+            flap.classList.remove('animating');
+          }, 150);
+        }, totalDelay);
+      });
+    }
+
+    // Initialize
+    createBoard();
+
+    // Start animation after a brief delay
+    setTimeout(animateBoard, 500);
+
+    // Click to replay
+    document.body.addEventListener('click', () => {
+      createBoard();
+      setTimeout(animateBoard, 100);
+    });
+  </script>
+</body>
+</html>
