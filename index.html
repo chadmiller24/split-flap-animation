@@ -44,43 +44,107 @@
       width: 80px;
       height: 100px;
       position: relative;
-      perspective: 300px;
     }
 
-    /* Top and bottom static halves */
-    .top-half, .bottom-half {
+    /* Static bottom half - always visible behind the flap */
+    .bottom {
       position: absolute;
+      bottom: 0;
+      left: 0;
       width: 100%;
       height: 50%;
+      background: url('tile.png') bottom center / 80px 100px no-repeat;
+      border-radius: 0 0 8px 8px;
       overflow: hidden;
       display: flex;
       justify-content: center;
-      background: url('tile.png') center/80px 100px no-repeat;
-    }
-
-    .top-half {
-      top: 0;
-      border-radius: 8px 8px 0 0;
-      align-items: flex-end;
-      background-position: top center;
-    }
-
-    .bottom-half {
-      bottom: 0;
-      border-radius: 0 0 8px 8px;
       align-items: flex-start;
-      background-position: bottom center;
     }
 
-    .top-half .char-display {
-      transform: translateY(50%);
-    }
-
-    .bottom-half .char-display {
+    .bottom .char {
       transform: translateY(-50%);
     }
 
-    .char-display {
+    /* Static top half - visible when no flip is happening */
+    .top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      background: url('tile.png') top center / 80px 100px no-repeat;
+      border-radius: 8px 8px 0 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 1;
+    }
+
+    .top .char {
+      transform: translateY(50%);
+    }
+
+    /* The flipping flap - sits on top */
+    .flap-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      perspective: 400px;
+      z-index: 10;
+    }
+
+    .flap {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transform-origin: bottom center;
+      transition: transform 0.12s ease-in;
+    }
+
+    .flap.flip {
+      transform: rotateX(-180deg);
+    }
+
+    .flap-front {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: url('tile.png') top center / 80px 100px no-repeat;
+      border-radius: 8px 8px 0 0;
+      backface-visibility: hidden;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .flap-front .char {
+      transform: translateY(50%);
+    }
+
+    .flap-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: url('tile.png') bottom center / 80px 100px no-repeat;
+      border-radius: 0 0 8px 8px;
+      backface-visibility: hidden;
+      transform: rotateX(180deg);
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .flap-back .char {
+      transform: translateY(-50%);
+    }
+
+    .char {
       font-size: 72px;
       font-weight: 400;
       color: #fff;
@@ -88,92 +152,27 @@
       line-height: 1;
     }
 
-    /* The flipping flap */
-    .flap {
-      position: absolute;
-      width: 100%;
-      height: 50%;
-      top: 0;
-      transform-style: preserve-3d;
-      transform-origin: bottom center;
-      z-index: 10;
-    }
-
-    .flap-front, .flap-back {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      backface-visibility: hidden;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      background: url('tile.png') center/80px 100px no-repeat;
-    }
-
-    .flap-front {
-      background-position: top center;
-      border-radius: 8px 8px 0 0;
-      align-items: flex-end;
-    }
-
-    .flap-front .char-display {
-      transform: translateY(50%);
-    }
-
-    .flap-back {
-      background-position: bottom center;
-      border-radius: 0 0 8px 8px;
-      transform: rotateX(180deg);
-      align-items: flex-start;
-    }
-
-    .flap-back .char-display {
-      transform: translateY(-50%);
-    }
-
-    .flap.flipping {
-      animation: flipDown 0.08s ease-in forwards;
-    }
-
-    @keyframes flipDown {
-      0% {
-        transform: rotateX(0deg);
-      }
-      100% {
-        transform: rotateX(-180deg);
-      }
-    }
-
-    /* Horizontal split line */
-    .split-line {
-      position: absolute;
-      top: 50%;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: #000;
-      z-index: 20;
-      transform: translateY(-50%);
-    }
-
-    /* Chevron styling */
-    .chevron {
+    .char.chevron {
       font-size: 60px;
     }
 
-    /* Shopify logo */
-    .logo-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .logo-container svg {
+    .char.logo svg {
       width: 50px;
       height: 50px;
     }
 
-    /* Click to replay */
+    /* Split line */
+    .split-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: #000;
+      transform: translateY(-50%);
+      z-index: 20;
+    }
+
     .replay-hint {
       position: fixed;
       bottom: 20px;
@@ -193,13 +192,13 @@
 <path d="M42.2615 60.8531L57.7013 57.0146C57.7013 57.0146 51.0531 12.0669 51.0114 11.7583C50.9698 11.4496 50.7003 11.2806 50.4774 11.261C50.2545 11.2414 45.9089 11.1753 45.9089 11.1753C45.9089 11.1753 43.2585 8.60076 42.2639 7.62827V60.8531H42.2615Z" fill="white"/>
 </svg>`;
 
-    const FLAP_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*+-=.:;<>?';
+    const FLAP_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
     const rows = [
       { text: '              ', delay: 0 },
       { text: '              ', delay: 0 },
       { text: 'EVERYWHERE    ', delay: 0 },
-      { text: '    EDITION  S', delay: 800, hasLogo: true },
+      { text: '    EDITION  L', delay: 800, hasLogo: true },
       { text: '>>>           ', delay: 1600, isChevron: true },
       { text: 'SECTION       ', delay: 2400 },
       { text: '              ', delay: 0 },
@@ -208,155 +207,138 @@
 
     const CELLS_PER_ROW = 14;
     const CHAR_DELAY = 60;
-    const FLIP_DURATION = 80;
-    const MIN_FLIPS = 6;
-    const MAX_FLIPS = 14;
+    const FLIP_DURATION = 120;
+    const MIN_FLIPS = 8;
+    const MAX_FLIPS = 16;
 
     function getRandomChar() {
       return FLAP_CHARS[Math.floor(Math.random() * FLAP_CHARS.length)];
     }
 
-    function createCharDisplay(char, isLogo, isChevron) {
-      if (isLogo) {
-        const container = document.createElement('div');
-        container.className = 'char-display logo-container';
-        container.innerHTML = shopifyLogo;
-        return container;
+    function makeCharContent(char, isLogo, isChevron) {
+      if (isLogo && char === 'LOGO') {
+        return shopifyLogo;
       }
-      const span = document.createElement('span');
-      span.className = 'char-display' + (isChevron ? ' chevron' : '');
-      span.textContent = char;
-      return span;
+      return char || '';
     }
 
-    function createCell(targetChar, isLogo, isChevron) {
+    function createCell() {
       const cell = document.createElement('div');
       cell.className = 'cell';
 
-      // Bottom half (static, shows current char)
-      const bottomHalf = document.createElement('div');
-      bottomHalf.className = 'bottom-half';
-      bottomHalf.appendChild(createCharDisplay('', isLogo, isChevron));
+      // Bottom half (reveals new char)
+      const bottom = document.createElement('div');
+      bottom.className = 'bottom';
+      const bottomChar = document.createElement('span');
+      bottomChar.className = 'char';
+      bottom.appendChild(bottomChar);
 
-      // Top half (static, shows current char)
-      const topHalf = document.createElement('div');
-      topHalf.className = 'top-half';
-      topHalf.appendChild(createCharDisplay('', isLogo, isChevron));
+      // Top half (shows current char)
+      const top = document.createElement('div');
+      top.className = 'top';
+      const topChar = document.createElement('span');
+      topChar.className = 'char';
+      top.appendChild(topChar);
 
-      // Flap (the animated part)
+      // Flap container with perspective
+      const flapContainer = document.createElement('div');
+      flapContainer.className = 'flap-container';
+
       const flap = document.createElement('div');
       flap.className = 'flap';
 
+      // Front of flap (shows old char, visible initially)
       const flapFront = document.createElement('div');
       flapFront.className = 'flap-front';
-      flapFront.appendChild(createCharDisplay('', isLogo, isChevron));
+      const flapFrontChar = document.createElement('span');
+      flapFrontChar.className = 'char';
+      flapFront.appendChild(flapFrontChar);
 
+      // Back of flap (shows new char, revealed after flip)
       const flapBack = document.createElement('div');
       flapBack.className = 'flap-back';
-      flapBack.appendChild(createCharDisplay('', isLogo, isChevron));
+      const flapBackChar = document.createElement('span');
+      flapBackChar.className = 'char';
+      flapBack.appendChild(flapBackChar);
 
       flap.appendChild(flapFront);
       flap.appendChild(flapBack);
+      flapContainer.appendChild(flap);
 
       // Split line
       const splitLine = document.createElement('div');
       splitLine.className = 'split-line';
 
-      cell.appendChild(bottomHalf);
-      cell.appendChild(topHalf);
-      cell.appendChild(flap);
+      cell.appendChild(bottom);
+      cell.appendChild(top);
+      cell.appendChild(flapContainer);
       cell.appendChild(splitLine);
-
-      cell.dataset.target = targetChar;
-      cell.dataset.isLogo = isLogo ? 'true' : 'false';
-      cell.dataset.isChevron = isChevron ? 'true' : 'false';
 
       return cell;
     }
 
-    function updateCellDisplay(cell, char) {
-      const isLogo = cell.dataset.isLogo === 'true';
-      const isChevron = cell.dataset.isChevron === 'true';
+    function setChar(cell, char, isLogo, isChevron) {
+      const content = makeCharContent(char, isLogo, isChevron);
+      const charClass = isChevron ? 'char chevron' : (isLogo && char === 'LOGO' ? 'char logo' : 'char');
 
-      const topHalf = cell.querySelector('.top-half .char-display');
-      const bottomHalf = cell.querySelector('.bottom-half .char-display');
-
-      if (isLogo && char === 'LOGO') {
-        topHalf.innerHTML = shopifyLogo;
-        bottomHalf.innerHTML = shopifyLogo;
-      } else {
-        topHalf.textContent = char;
-        bottomHalf.textContent = char;
-      }
+      cell.querySelector('.top .char').className = charClass;
+      cell.querySelector('.top .char').innerHTML = content;
+      cell.querySelector('.bottom .char').className = charClass;
+      cell.querySelector('.bottom .char').innerHTML = content;
+      cell.querySelector('.flap-front .char').className = charClass;
+      cell.querySelector('.flap-front .char').innerHTML = content;
     }
 
-    function flipCell(cell, fromChar, toChar, callback) {
-      const isLogo = cell.dataset.isLogo === 'true';
-      const isChevron = cell.dataset.isChevron === 'true';
-      const flap = cell.querySelector('.flap');
-      const flapFront = flap.querySelector('.flap-front .char-display');
-      const flapBack = flap.querySelector('.flap-back .char-display');
-      const bottomHalf = cell.querySelector('.bottom-half .char-display');
+    function flipTo(cell, newChar, isLogo, isChevron) {
+      return new Promise(resolve => {
+        const flap = cell.querySelector('.flap');
+        const flapFrontChar = cell.querySelector('.flap-front .char');
+        const flapBackChar = cell.querySelector('.flap-back .char');
+        const bottomChar = cell.querySelector('.bottom .char');
+        const topChar = cell.querySelector('.top .char');
 
-      // Set up the flap
-      if (isLogo && toChar === 'LOGO') {
-        flapFront.innerHTML = fromChar === 'LOGO' ? shopifyLogo : fromChar;
-        flapBack.innerHTML = shopifyLogo;
-      } else {
-        flapFront.textContent = fromChar;
-        flapBack.textContent = toChar;
-      }
+        const newContent = makeCharContent(newChar, isLogo, isChevron);
+        const charClass = isChevron ? 'char chevron' : (isLogo && newChar === 'LOGO' ? 'char logo' : 'char');
 
-      // Reset flap position
-      flap.style.transform = 'rotateX(0deg)';
-      flap.classList.remove('flipping');
+        // Set up: flap front has current char, flap back and bottom have new char
+        flapBackChar.className = charClass;
+        flapBackChar.innerHTML = newContent;
+        bottomChar.className = charClass;
+        bottomChar.innerHTML = newContent;
 
-      // Force reflow
-      void flap.offsetWidth;
+        // Reset flap to unflipped state
+        flap.classList.remove('flip');
+        void flap.offsetWidth; // Force reflow
 
-      // Start flip animation
-      flap.classList.add('flipping');
+        // Trigger flip
+        flap.classList.add('flip');
 
-      setTimeout(() => {
-        // Update the static halves to show the new character
-        updateCellDisplay(cell, toChar);
-        flap.classList.remove('flipping');
-        flap.style.transform = 'rotateX(0deg)';
+        setTimeout(() => {
+          // After flip completes, update static elements and reset flap
+          topChar.className = charClass;
+          topChar.innerHTML = newContent;
+          flapFrontChar.className = charClass;
+          flapFrontChar.innerHTML = newContent;
+          flap.classList.remove('flip');
 
-        if (callback) callback();
-      }, FLIP_DURATION);
+          resolve();
+        }, FLIP_DURATION);
+      });
     }
 
-    function animateCell(cell, callback) {
-      const targetChar = cell.dataset.target;
-      const isLogo = cell.dataset.isLogo === 'true';
-
-      if (targetChar.trim() === '' && !isLogo) {
-        if (callback) callback();
-        return;
-      }
+    async function animateCell(cell, targetChar, isLogo, isChevron) {
+      if (targetChar.trim() === '' && !isLogo) return;
 
       const numFlips = MIN_FLIPS + Math.floor(Math.random() * (MAX_FLIPS - MIN_FLIPS));
-      let currentFlip = 0;
-      let currentChar = '';
 
-      function doFlip() {
-        if (currentFlip >= numFlips) {
-          // Final flip to target
-          const finalChar = isLogo ? 'LOGO' : targetChar;
-          flipCell(cell, currentChar, finalChar, callback);
-          return;
-        }
-
-        const nextChar = getRandomChar();
-        flipCell(cell, currentChar, nextChar, () => {
-          currentChar = nextChar;
-          currentFlip++;
-          setTimeout(doFlip, 20);
-        });
+      for (let i = 0; i < numFlips; i++) {
+        await flipTo(cell, getRandomChar(), false, isChevron);
+        await new Promise(r => setTimeout(r, 30));
       }
 
-      doFlip();
+      // Final flip to target
+      const finalChar = isLogo ? 'LOGO' : targetChar;
+      await flipTo(cell, finalChar, isLogo, isChevron);
     }
 
     function createBoard() {
@@ -372,10 +354,12 @@
           const isLogo = rowData.hasLogo && i === CELLS_PER_ROW - 1;
           const isChevron = rowData.isChevron && charValue === '>';
 
-          const cell = createCell(charValue, isLogo, isChevron);
-          cell.dataset.row = rowIndex;
-          cell.dataset.col = i;
+          const cell = createCell();
+          cell.dataset.target = charValue;
+          cell.dataset.isLogo = isLogo;
+          cell.dataset.isChevron = isChevron;
           cell.dataset.rowDelay = rowData.delay;
+          cell.dataset.col = i;
 
           row.appendChild(cell);
         }
@@ -387,22 +371,23 @@
     function animateBoard() {
       const cells = document.querySelectorAll('.cell');
 
-      cells.forEach((cell) => {
+      cells.forEach(cell => {
         const rowDelay = parseInt(cell.dataset.rowDelay);
         const col = parseInt(cell.dataset.col);
         const totalDelay = rowDelay + (col * CHAR_DELAY);
+        const targetChar = cell.dataset.target;
+        const isLogo = cell.dataset.isLogo === 'true';
+        const isChevron = cell.dataset.isChevron === 'true';
 
         setTimeout(() => {
-          animateCell(cell);
+          animateCell(cell, targetChar, isLogo, isChevron);
         }, totalDelay);
       });
     }
 
-    // Initialize
     createBoard();
     setTimeout(animateBoard, 500);
 
-    // Click to replay
     document.body.addEventListener('click', () => {
       createBoard();
       setTimeout(animateBoard, 100);
